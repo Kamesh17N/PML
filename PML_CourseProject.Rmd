@@ -1,0 +1,75 @@
+---
+title: "PML Course Project"
+author: "Kamesh Narayanan"
+date: "10/23/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goal of the project:
+To build a machine learning model to predict the manner in which the participants did their exercises and then predict 20 test cases using the built model.
+
+## Get Data:
+Set working directory to the project file
+
+```{r, echo = TRUE}
+setwd("C:/Users/MAHE/Desktop/PML")
+```
+Load caret and randomForest packages
+
+```{r, echo=TRUE}
+library(caret)
+library(randomForest)
+```
+Read data into workspace
+
+```{r, echo = TRUE}
+rawData <- read.csv("pml-training.csv", na.strings = c("NA","#DIV/0!", ""))
+```
+
+## Clean Data
+1. Get rid of columns that have NAs
+2. Get rid of columns 1 to 7 since they dont have data useful for analysis
+3. Remove data with zero variability
+4. Coerce the column 'Classe' to factor
+
+```{r, echo=TRUE}
+rawData <- rawData[, colSums(is.na(rawData)) == 0]
+rawData <- rawData[, -c(1:7)]
+dim(rawData)
+
+noVar <- nearZeroVar(rawData, saveMetrics=TRUE)
+data <- rawData[,noVar$nzv==FALSE]
+data[, 53] <- as.factor(data$classe)
+dim(data)
+```
+
+## Split the data into training (75%) and validation (25%) sets 
+```{r, echo=TRUE}
+inTrain <- createDataPartition(y = data$classe, times = 1, p = 0.75, list = FALSE)
+training <- data[inTrain,]
+testing <- data[-inTrain,]
+```
+
+## Fit a machine learning model and plot it
+I have used the function randomForest instead of train because it is faster.
+Predcit on the validation set. This is an important set as we can find the out of sample error.
+Print the confusion matrix to show error
+
+```{r, echo=TRUE}
+RFmodel <- randomForest(classe ~ ., data = training)
+RFprediction <- predict(RFmodel, testing) #Cross validation
+RFconfMat <- confusionMatrix(RFprediction, testing$classe)
+RFconfMat
+plot(RFmodel)
+```
+
+## Predict on the given test set
+```{r, echo = TRUE}
+TestingSET <- read.csv("pml-testing.csv", na.strings = c("NA","#DIV/0!", ""))
+finalPrediction <- predict(RFmodel, TestingSET)
+finalPrediction
+```
